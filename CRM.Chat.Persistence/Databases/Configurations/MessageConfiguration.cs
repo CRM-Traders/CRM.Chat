@@ -33,15 +33,17 @@ public class MessageConfiguration : AuditableEntityTypeConfiguration<Message>
             .IsRequired()
             .HasConversion<int>();
 
+        // Configure AttachmentIds as JSON column
+        builder.Property(m => m.AttachmentIds)
+            .HasConversion(
+                v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions)null!),
+                v => System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(v, (System.Text.Json.JsonSerializerOptions)null!) ?? new List<Guid>())
+            .HasColumnType("jsonb");
+
         builder.HasIndex(m => new { m.ConversationId, m.SentAt });
         builder.HasIndex(m => m.SenderId);
 
         // Configure relationships
-        builder.HasMany(m => m.Attachments)
-            .WithOne()
-            .HasForeignKey(a => a.MessageId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         builder.HasMany(m => m.Statuses)
             .WithOne()
             .HasForeignKey(s => s.MessageId)

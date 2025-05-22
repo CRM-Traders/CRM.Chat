@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Common\Specifications\**" />
+    <EmbeddedResource Remove="Common\Specifications\**" />
+    <None Remove="Common\Specifications\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.5" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.5" />
@@ -17,10 +23,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CRM.Chat.Domain\CRM.Chat.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Common\Specifications\" />
   </ItemGroup>
 
 </Project>

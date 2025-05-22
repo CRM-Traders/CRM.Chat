@@ -3,7 +3,6 @@ using CRM.Chat.Application.Common.Abstractions.Users;
 using CRM.Chat.Domain.Common.Entities;
 using CRM.Chat.Domain.Entities.ConversationMembers;
 using CRM.Chat.Domain.Entities.Conversations;
-using CRM.Chat.Domain.Entities.MessageAttachments;
 using CRM.Chat.Domain.Entities.Messages;
 using CRM.Chat.Domain.Entities.MessageStatuses;
 using CRM.Chat.Domain.Entities.OutboxMessages;
@@ -19,7 +18,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<ConversationMember> ConversationMembers => Set<ConversationMember>();
-    public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
     public DbSet<MessageStatus> MessageStatuses => Set<MessageStatus>();
     public DbSet<UserPresence> UserPresences => Set<UserPresence>();
 

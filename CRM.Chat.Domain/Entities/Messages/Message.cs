@@ -1,5 +1,4 @@
 ﻿using CRM.Chat.Domain.Common.Entities;
-using CRM.Chat.Domain.Entities.MessageAttachments;
 using CRM.Chat.Domain.Entities.Messages.DomainEvents;
 using CRM.Chat.Domain.Entities.Messages.Enums;
 using CRM.Chat.Domain.Entities.MessageStatuses;
@@ -14,15 +13,14 @@ public class Message : AggregateRoot
     public DateTimeOffset SentAt { get; private set; }
     public bool IsEdited { get; private set; }
     public MessageType Type { get; private set; }
-    private readonly List<MessageAttachment> _attachments = new();
-    public IReadOnlyCollection<MessageAttachment> Attachments => _attachments.AsReadOnly();
+    public List<Guid> AttachmentIds { get; private set; } = new();
     private readonly List<MessageStatus> _statuses = new();
     public IReadOnlyCollection<MessageStatus> Statuses => _statuses.AsReadOnly();
 
     private Message() { }
 
     public static Message Create(Guid conversationId, Guid senderId, string content,
-        MessageType type = MessageType.Text, string? senderIp = null)
+        MessageType type = MessageType.Text, List<Guid>? attachmentIds = null, string? senderIp = null)
     {
         var message = new Message
         {
@@ -31,19 +29,19 @@ public class Message : AggregateRoot
             Content = content,
             SentAt = DateTimeOffset.UtcNow,
             IsEdited = false,
-            Type = type
+            Type = type,
+            AttachmentIds = attachmentIds ?? new List<Guid>()
         };
 
         message.SetCreationTracking(senderId.ToString(), senderIp);
 
-        // Use the base entity method to create a domain event
         message.AddDomainEvent(new MessageSentEvent(
             message.Id,
             conversationId,
             senderId,
             content,
             type,
-            false)); // No attachments by default
+            message.AttachmentIds.Any()));
 
         return message;
     }
@@ -56,7 +54,6 @@ public class Message : AggregateRoot
         IsEdited = true;
         SetModificationTracking(modifiedBy, ipAddress);
 
-        // Use the base entity method to create a domain event
         AddDomainEvent(new MessageEditedEvent(
             Id,
             ConversationId,
@@ -65,7 +62,6 @@ public class Message : AggregateRoot
 
     public void MarkAsReadBy(Guid userId)
     {
-        // Use the base entity method to create a domain event
         AddDomainEvent(new MessageReadEvent(
             Id,
             ConversationId,

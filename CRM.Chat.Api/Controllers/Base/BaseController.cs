@@ -1,9 +1,11 @@
 ﻿using CRM.Chat.Application.Common.Abstractions.Mediators;
 using CRM.Chat.Domain.Common.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CRM.Chat.Api.Controllers.Base;
 
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class BaseController(IMediator _mediator) : ControllerBase

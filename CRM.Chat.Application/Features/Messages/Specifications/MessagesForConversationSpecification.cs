@@ -16,7 +16,6 @@ public class MessagesForConversationSpecification : BaseSpecification<Message>
             AddCriteria(x => x.SentAt < before.Value);
         }
 
-        AddInclude(x => x.Attachments);
         AddInclude(x => x.Statuses);
         ApplyOrderByDescending(x => x.SentAt);
         ApplyPaging(0, limit);
