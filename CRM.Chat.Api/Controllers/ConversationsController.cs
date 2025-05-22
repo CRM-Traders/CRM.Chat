@@ -2,9 +2,6 @@
 using CRM.Chat.Application.Common.Abstractions.Mediators;
 using CRM.Chat.Application.Features.Conversations.Commands;
 using CRM.Chat.Application.Features.Conversations.Queries;
-using CRM.Chat.Application.Features.Messages.Commands;
-using CRM.Chat.Application.Features.Messages.Queries;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CRM.Chat.Api.Controllers;
@@ -52,67 +49,50 @@ public class ConversationsController : BaseController
     /// <summary>
     /// Get details of a specific conversation
     /// </summary>
-    [HttpGet("{id:guid}")]
-    public async Task<IResult> GetConversationDetails(Guid id, CancellationToken cancellationToken)
+    [HttpGet("{conversationId:guid}")]
+    public async Task<IResult> GetConversationDetails(Guid conversationId, CancellationToken cancellationToken)
     {
-        var query = new GetConversationDetailsQuery { ConversationId = id };
+        var query = new GetConversationDetailsQuery { ConversationId = conversationId };
         return await SendAsync(query, cancellationToken);
-    }
-
-    /// <summary>
-    /// Close a conversation
-    /// </summary>
-    [HttpPost("{id:guid}/close")]
-    public async Task<IResult> CloseConversation(Guid id, CancellationToken cancellationToken)
-    {
-        var command = new CloseConversationCommand { ConversationId = id };
-        return await SendAsync(command, cancellationToken);
-    }
-
-    /// <summary>
-    /// Send a message in a conversation
-    /// Request body example:
-    /// {
-    ///   "content": "Hello, this is a message",
-    ///   "type": 1,
-    ///   "attachmentIds": ["3fa85f64-5717-4562-b3fc-2c963f66afa6", "4fa85f64-5717-4562-b3fc-2c963f66afa7"]
-    /// }
-    /// </summary>
-    [HttpPost("{id:guid}/messages")]
-    public async Task<IResult> SendMessage(Guid id, SendMessageCommand command, CancellationToken cancellationToken)
-    {
-        command.ConversationId = id;
-        return await SendAsync(command, cancellationToken);
-    }
-
-    /// <summary>
-    /// Get messages in a conversation
-    /// </summary>
-    [HttpGet("{id:guid}/messages")]
-    public async Task<IResult> GetMessages(Guid id, [FromQuery] GetMessagesQuery query, CancellationToken cancellationToken)
-    {
-        query.ConversationId = id;
-        return await SendAsync(query, cancellationToken);
-    }
-
-    /// <summary>
-    /// Edit a message
-    /// </summary>
-    [HttpPut("{id:guid}/messages/{messageId:guid}")]
-    public async Task<IResult> EditMessage(Guid id, Guid messageId, EditMessageCommand command, CancellationToken cancellationToken)
-    {
-        command.ConversationId = id;
-        command.MessageId = messageId;
-        return await SendAsync(command, cancellationToken);
     }
 
     /// <summary>
     /// Add a member to a group conversation
     /// </summary>
-    [HttpPost("{id:guid}/members")]
-    public async Task<IResult> AddMember(Guid id, AddMemberCommand command, CancellationToken cancellationToken)
+    [HttpPost("{conversationId:guid}/members")]
+    public async Task<IResult> AddMember(Guid conversationId, AddMemberCommand command, CancellationToken cancellationToken)
     {
-        command.ConversationId = id;
+        command.ConversationId = conversationId;
+        return await SendAsync(command, cancellationToken);
+    }
+
+    /// <summary>
+    /// Close a conversation
+    /// </summary>
+    [HttpPost("{conversationId:guid}/close")]
+    public async Task<IResult> CloseConversation(Guid conversationId, CancellationToken cancellationToken)
+    {
+        var command = new CloseConversationCommand { ConversationId = conversationId };
+        return await SendAsync(command, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reopen a closed conversation
+    /// </summary>
+    [HttpPost("{conversationId:guid}/reopen")]
+    public async Task<IResult> ReopenConversation(Guid conversationId, CancellationToken cancellationToken)
+    {
+        var command = new ReopenConversationCommand { ConversationId = conversationId };
+        return await SendAsync(command, cancellationToken);
+    }
+
+    /// <summary>
+    /// Send typing indicator in a conversation
+    /// </summary>
+    [HttpPost("{conversationId:guid}/typing")]
+    public async Task<IResult> SendTypingIndicator(Guid conversationId, SendTypingIndicatorCommand command, CancellationToken cancellationToken)
+    {
+        command.ConversationId = conversationId;
         return await SendAsync(command, cancellationToken);
     }
 }

@@ -21,38 +21,47 @@ public class Conversation : AggregateRoot
     private Conversation() { }
 
     // User-operator conversation
-    public static Conversation CreateExternalConversation(Guid userId)
+    public static Conversation CreateExternalConversation(Guid userId, Guid createdBy)
     {
-        var convesationType = ConversationType.External;
-
         var conversation = new Conversation
         {
             Name = $"Support Conversation",
-            Type = convesationType,
+            Type = ConversationType.External,
             ExternalUserId = userId,
             IsActive = true
         };
 
-        conversation.AddDomainEvent(new ConversationCreatedEvent(conversation.Id, convesationType, [userId]));
+        conversation.AddDomainEvent(new ConversationCreatedEvent(
+            conversation.Id,
+            conversation.Type,
+            conversation.Name,
+            createdBy,
+            [userId],
+            userId));
+
         return conversation;
     }
 
     // Direct message between internal users
     public static Conversation CreateDirectConversation(Guid initiatorId, Guid receiverId)
     {
-        var convesationType = ConversationType.Direct;
-
         var conversation = new Conversation
         {
             Name = $"Direct Message",
-            Type = convesationType,
+            Type = ConversationType.Direct,
             IsActive = true
         };
 
         conversation._members.Add(new ConversationMember(conversation.Id, initiatorId));
         conversation._members.Add(new ConversationMember(conversation.Id, receiverId));
 
-        conversation.AddDomainEvent(new ConversationCreatedEvent(conversation.Id, convesationType, [initiatorId, receiverId]));
+        conversation.AddDomainEvent(new ConversationCreatedEvent(
+            conversation.Id,
+            conversation.Type,
+            conversation.Name,
+            initiatorId,
+            new[] { initiatorId, receiverId }));
+
         return conversation;
     }
 
@@ -79,12 +88,29 @@ public class Conversation : AggregateRoot
             conversation._members.Add(new ConversationMember(conversation.Id, memberId));
         }
 
+        var allMemberIds = conversation._members.Select(m => m.UserId).ToList();
         conversation.AddDomainEvent(new ConversationCreatedEvent(
             conversation.Id,
             conversation.Type,
-            conversation._members.Select(m => m.UserId).ToList()));
+            conversation.Name,
+            creatorId,
+            allMemberIds));
 
         return conversation;
+    }
+
+    public void UpdateName(string newName, Guid updatedBy)
+    {
+        if (Type != ConversationType.Group)
+            throw new InvalidOperationException("Only group conversations can have their name updated");
+
+        if (string.IsNullOrWhiteSpace(newName))
+            throw new ArgumentException("Group name cannot be empty", nameof(newName));
+
+        var oldName = Name;
+        Name = newName;
+
+        AddDomainEvent(new ConversationUpdatedEvent(Id, oldName, newName, updatedBy));
     }
 
     public void AddMessage(Message message)
@@ -93,44 +119,110 @@ public class Conversation : AggregateRoot
             throw new InvalidOperationException("Cannot add message to inactive conversation");
 
         _messages.Add(message);
-        AddDomainEvent(new MessageAddedEvent(Id, message.Id));
+        // Note: MessageSentEvent is raised by the Message entity itself
     }
 
-    public void AddMember(Guid userId, bool isAdmin = false)
+    public void AddMember(Guid userId, Guid addedBy, bool isAdmin = false)
     {
         if (Type != ConversationType.Group)
             throw new InvalidOperationException("Members can only be added to group conversations");
 
-        if (_members.Any(m => m.UserId == userId))
+        if (_members.Any(m => m.UserId == userId && !m.IsDeleted))
             return; // Already a member
 
         var member = new ConversationMember(Id, userId, isAdmin);
         _members.Add(member);
 
-        AddDomainEvent(new MemberAddedEvent(Id, userId, isAdmin));
+        var allMemberIds = _members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
+        AddDomainEvent(new MemberAddedEvent(Id, userId, addedBy, isAdmin, allMemberIds));
     }
 
-    public void RemoveMember(Guid userId)
+    public void RemoveMember(Guid userId, Guid removedBy)
     {
         if (Type != ConversationType.Group)
             throw new InvalidOperationException("Members can only be removed from group conversations");
 
-        var member = _members.FirstOrDefault(m => m.UserId == userId);
+        var member = _members.FirstOrDefault(m => m.UserId == userId && !m.IsDeleted);
         if (member == null)
             return; // Not a member
 
         // Cannot remove the last admin
-        if (member.IsAdmin && _members.Count(m => m.IsAdmin) <= 1)
+        if (member.IsAdmin && _members.Count(m => m.IsAdmin && !m.IsDeleted) <= 1)
             throw new InvalidOperationException("Cannot remove the last admin from a group");
 
-        _members.Remove(member);
+        member.SetDeletionTracking(removedBy.ToString(), null);
 
-        AddDomainEvent(new MemberRemovedEvent(Id, userId));
+        var remainingMemberIds = _members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
+        AddDomainEvent(new MemberRemovedEvent(Id, userId, removedBy, remainingMemberIds));
     }
 
-    public void Close()
+    public void PromoteMember(Guid userId, Guid promotedBy)
     {
+        if (Type != ConversationType.Group)
+            throw new InvalidOperationException("Members can only be promoted in group conversations");
+
+        var member = _members.FirstOrDefault(m => m.UserId == userId && !m.IsDeleted);
+        if (member == null)
+            throw new InvalidOperationException("User is not a member of this conversation");
+
+        if (member.IsAdmin)
+            return; // Already an admin
+
+        member.MakeAdmin();
+        AddDomainEvent(new MemberPromotedEvent(Id, userId, promotedBy));
+    }
+
+    public void DemoteMember(Guid userId, Guid demotedBy)
+    {
+        if (Type != ConversationType.Group)
+            throw new InvalidOperationException("Members can only be demoted in group conversations");
+
+        var member = _members.FirstOrDefault(m => m.UserId == userId && !m.IsDeleted);
+        if (member == null)
+            throw new InvalidOperationException("User is not a member of this conversation");
+
+        if (!member.IsAdmin)
+            return; // Not an admin
+
+        // Cannot demote the last admin
+        if (_members.Count(m => m.IsAdmin && !m.IsDeleted) <= 1)
+            throw new InvalidOperationException("Cannot demote the last admin from a group");
+
+        member.RemoveAdmin();
+        AddDomainEvent(new MemberDemotedEvent(Id, userId, demotedBy));
+    }
+
+    public void Close(Guid closedBy)
+    {
+        if (!IsActive)
+            return; // Already closed
+
         IsActive = false;
-        AddDomainEvent(new ConversationClosedEvent(Id));
+        var memberIds = _members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
+        AddDomainEvent(new ConversationClosedEvent(Id, closedBy, memberIds));
+    }
+
+    public void Reopen(Guid reopenedBy)
+    {
+        if (IsActive)
+            return; // Already active
+
+        IsActive = true;
+        var memberIds = _members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
+        AddDomainEvent(new ConversationReopenedEvent(Id, reopenedBy, memberIds));
+    }
+
+    public void EmitTypingIndicator(Guid userId, bool isTyping)
+    {
+        if (!_members.Any(m => m.UserId == userId && !m.IsDeleted))
+            throw new InvalidOperationException("User is not a member of this conversation");
+
+        var memberIds = _members.Where(m => !m.IsDeleted && m.UserId != userId).Select(m => m.UserId).ToList();
+        AddDomainEvent(new TypingIndicatorEvent(Id, userId, isTyping, memberIds));
+    }
+
+    public ICollection<Guid> GetMemberIds()
+    {
+        return _members.Where(m => !m.IsDeleted).Select(m => m.UserId).ToList();
     }
 }

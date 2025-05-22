@@ -34,10 +34,10 @@ public class CreateExternalConversationCommandHandler : IRequestHandler<CreateEx
     public async ValueTask<Result<Guid>> Handle(CreateExternalConversationCommand request, CancellationToken cancellationToken)
     {
         var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
-        var currentUserId = _userContext.Id.ToString();
+        var currentUserId = _userContext.Id;
 
-        var conversation = Conversation.CreateExternalConversation(request.UserId);
-        conversation.SetCreationTracking(currentUserId, ipAddress);
+        var conversation = Conversation.CreateExternalConversation(request.UserId, currentUserId);
+        conversation.SetCreationTracking(currentUserId.ToString(), ipAddress);
 
         await _conversationRepository.AddAsync(conversation, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

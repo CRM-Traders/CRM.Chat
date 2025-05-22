@@ -2,15 +2,15 @@
 
 namespace CRM.Chat.Domain.Entities.Conversations.DomainEvents;
 
-public class ConversationClosedEvent : DomainEvent
+public class ConversationReopenedEvent : DomainEvent
 {
-    public Guid ClosedBy { get; }
+    public Guid ReopenedBy { get; }
     public ICollection<Guid> MemberIds { get; }
 
-    public ConversationClosedEvent(Guid conversationId, Guid closedBy, ICollection<Guid> memberIds)
+    public ConversationReopenedEvent(Guid conversationId, Guid reopenedBy, ICollection<Guid> memberIds)
         : base(conversationId, nameof(Conversation))
     {
-        ClosedBy = closedBy;
+        ReopenedBy = reopenedBy;
         MemberIds = memberIds;
         ProcessingStrategy = ProcessingStrategy.Immediate;
     }

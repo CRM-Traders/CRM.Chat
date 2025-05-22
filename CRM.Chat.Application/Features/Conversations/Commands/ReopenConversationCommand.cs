@@ -7,21 +7,19 @@ using Microsoft.AspNetCore.Http;
 
 namespace CRM.Chat.Application.Features.Conversations.Commands;
 
-public class AddMemberCommand : IRequest<Unit>
+public class ReopenConversationCommand : IRequest<Unit>
 {
     public Guid ConversationId { get; set; }
-    public Guid UserId { get; set; }
-    public bool IsAdmin { get; set; }
 }
 
-public class AddMemberCommandHandler : IRequestHandler<AddMemberCommand, Unit>
+public class ReopenConversationCommandHandler : IRequestHandler<ReopenConversationCommand, Unit>
 {
     private readonly IRepository<Conversation> _conversationRepository;
     private readonly IUserContext _userContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IUnitOfWork _unitOfWork;
 
-    public AddMemberCommandHandler(
+    public ReopenConversationCommandHandler(
         IRepository<Conversation> conversationRepository,
         IUserContext userContext,
         IHttpContextAccessor httpContextAccessor,
@@ -33,7 +31,7 @@ public class AddMemberCommandHandler : IRequestHandler<AddMemberCommand, Unit>
         _unitOfWork = unitOfWork;
     }
 
-    public async ValueTask<Result<Unit>> Handle(AddMemberCommand request, CancellationToken cancellationToken)
+    public async ValueTask<Result<Unit>> Handle(ReopenConversationCommand request, CancellationToken cancellationToken)
     {
         var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
         var currentUserId = _userContext.Id.ToString();
@@ -44,12 +42,7 @@ public class AddMemberCommandHandler : IRequestHandler<AddMemberCommand, Unit>
             return Result.Failure<Unit>("Conversation not found", "NotFound");
         }
 
-        if (!conversation.Members.Any(m => m.UserId == _userContext.Id && m.IsAdmin && !m.IsDeleted))
-        {
-            return Result.Failure<Unit>("Only admins can add members to a conversation", "Forbidden");
-        }
-
-        conversation.AddMember(request.UserId, _userContext.Id, request.IsAdmin);
+        conversation.Reopen(_userContext.Id);
         conversation.SetModificationTracking(currentUserId, ipAddress);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

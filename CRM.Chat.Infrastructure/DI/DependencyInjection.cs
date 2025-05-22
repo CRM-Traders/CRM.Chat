@@ -5,10 +5,12 @@ using CRM.Chat.Application.Common.Publishers;
 using CRM.Chat.Application.Common.Services.Identity;
 using CRM.Chat.Application.Common.Services.Outbox;
 using CRM.Chat.Domain.Common.Events;
+using CRM.Chat.Domain.Common.Options.RabbitMQ;
 using CRM.Chat.Infrastructure.Contexts;
 using CRM.Chat.Infrastructure.Publishers;
 using CRM.Chat.Infrastructure.Services.IdentityService;
 using CRM.Chat.Infrastructure.Services.Outbox;
+using CRM.Chat.Infrastructure.Workers;
 using CRM.Identity.Domain.Common.Options.Auth;
 using CRM.Identity.Infrastructure.Publishers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -29,7 +31,7 @@ public static class DependencyInjection
         services.ConfigureCors();
         services.AddAsymmetricAuthentication(configuration);
         services.AddOptions(configuration);
-        //services.AddHostedService<OutboxProcessorWorker>();
+        services.AddHostedService<OutboxProcessorWorker>();
 
         return services;
     }
@@ -53,6 +55,9 @@ public static class DependencyInjection
     {
         var jwtOptions = configuration.GetSection(nameof(JwtOptions)).Get<JwtOptions>()!;
         services.AddSingleton(jwtOptions);
+
+        var rabbitMQOptions = configuration.GetSection("RabbitMQ").Get<RabbitMQOptions>()!;
+        services.Configure<RabbitMQOptions>(configuration.GetSection("RabbitMQ"));
     }
 
     private static void AddSingeltonServices(this IServiceCollection services)

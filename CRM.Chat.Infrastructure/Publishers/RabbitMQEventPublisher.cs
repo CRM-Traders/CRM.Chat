@@ -68,7 +68,7 @@ public class RabbitMQEventPublisher : IExternalEventPublisher, IDisposable
                 AggregateType = outboxMessage.AggregateType,
                 OccurredOn = outboxMessage.CreatedAt,
                 Content = outboxMessage.Content,
-                Metadata = $"ProcessedAt {DateTimeOffset.UtcNow.ToString("o")}"
+                Metadata = $"ProcessedAt {DateTimeOffset.UtcNow:o}"
             };
 
             var messageJson = JsonSerializer.Serialize(eventMessage);
@@ -77,6 +77,8 @@ public class RabbitMQEventPublisher : IExternalEventPublisher, IDisposable
             var properties = _channel.CreateBasicProperties();
             properties.Persistent = true;
             properties.ContentType = "application/json";
+            properties.MessageId = outboxMessage.Id.ToString();
+            properties.Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
             var routingKey = $"events.{outboxMessage.AggregateType.ToLower()}";
 

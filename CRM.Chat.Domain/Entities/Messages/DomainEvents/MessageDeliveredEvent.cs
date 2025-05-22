@@ -2,20 +2,20 @@
 
 namespace CRM.Chat.Domain.Entities.Messages.DomainEvents;
 
-public class MessageReadEvent : DomainEvent
+public class MessageDeliveredEvent : DomainEvent
 {
     public Guid ConversationId { get; }
     public Guid SenderId { get; }
-    public Guid ReadByUserId { get; }
-    public DateTimeOffset ReadAt { get; }
+    public Guid DeliveredToUserId { get; }
+    public DateTimeOffset DeliveredAt { get; }
 
-    public MessageReadEvent(Guid messageId, Guid conversationId, Guid senderId, Guid readByUserId)
+    public MessageDeliveredEvent(Guid messageId, Guid conversationId, Guid senderId, Guid deliveredToUserId)
         : base(messageId, nameof(Message))
     {
         ConversationId = conversationId;
         SenderId = senderId;
-        ReadByUserId = readByUserId;
-        ReadAt = DateTimeOffset.UtcNow;
+        DeliveredToUserId = deliveredToUserId;
+        DeliveredAt = DateTimeOffset.UtcNow;
         ProcessingStrategy = ProcessingStrategy.Background;
     }
 }

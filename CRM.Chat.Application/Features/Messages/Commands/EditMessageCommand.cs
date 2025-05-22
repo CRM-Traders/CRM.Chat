@@ -36,7 +36,7 @@ public class EditMessageCommandHandler : IRequestHandler<EditMessageCommand, Uni
     public async ValueTask<Result<Unit>> Handle(EditMessageCommand request, CancellationToken cancellationToken)
     {
         var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
-        var currentUserId = _userContext.Id.ToString();
+        var currentUserId = _userContext.Id;
 
         var message = await _messageRepository.GetByIdAsync(request.MessageId, cancellationToken);
         if (message == null)

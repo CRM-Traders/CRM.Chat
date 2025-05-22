@@ -49,7 +49,7 @@ public class CloseConversationCommandHandler : IRequestHandler<CloseConversation
             return Result.Failure<Unit>("Only admins can close group conversations", "Forbidden");
         }
 
-        conversation.Close();
+        conversation.Close(_userContext.Id);
         conversation.SetModificationTracking(currentUserId, ipAddress);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

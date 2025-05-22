@@ -54,12 +54,16 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Gui
             return Result.Failure<Guid>("Cannot send message to inactive conversation", "BadRequest");
         }
 
+        // Get recipient IDs from conversation
+        var recipientIds = conversation.GetMemberIds();
+
         var message = Message.Create(
             request.ConversationId,
             _userContext.Id,
             request.Content,
             request.Type,
             request.AttachmentIds,
+            recipientIds,
             ipAddress);
 
         await _messageRepository.AddAsync(message, cancellationToken);

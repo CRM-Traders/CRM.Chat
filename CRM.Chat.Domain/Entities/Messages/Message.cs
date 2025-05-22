@@ -20,7 +20,8 @@ public class Message : AggregateRoot
     private Message() { }
 
     public static Message Create(Guid conversationId, Guid senderId, string content,
-        MessageType type = MessageType.Text, List<Guid>? attachmentIds = null, string? senderIp = null)
+        MessageType type = MessageType.Text, List<Guid>? attachmentIds = null,
+        ICollection<Guid>? recipientIds = null, string? senderIp = null)
     {
         var message = new Message
         {
@@ -35,36 +36,115 @@ public class Message : AggregateRoot
 
         message.SetCreationTracking(senderId.ToString(), senderIp);
 
+        // Create status records for all recipients
+        if (recipientIds != null)
+        {
+            foreach (var recipientId in recipientIds.Where(id => id != senderId))
+            {
+                var status = new MessageStatus(message.Id, recipientId);
+                message._statuses.Add(status);
+            }
+        }
+
         message.AddDomainEvent(new MessageSentEvent(
             message.Id,
             conversationId,
             senderId,
             content,
             type,
-            message.AttachmentIds.Any()));
+            message.AttachmentIds,
+            recipientIds ?? new List<Guid>()));
 
         return message;
     }
 
-    public void Edit(string newContent, string modifiedBy, string? ipAddress)
+    public void Edit(string newContent, Guid editedBy, string? ipAddress, ICollection<Guid>? recipientIds = null)
     {
-        if (Content == newContent) return;
+        if (SenderId != editedBy)
+            throw new InvalidOperationException("Only the sender can edit their message");
 
+        if (Content == newContent)
+            return;
+
+        var oldContent = Content;
         Content = newContent;
         IsEdited = true;
-        SetModificationTracking(modifiedBy, ipAddress);
+        SetModificationTracking(editedBy.ToString(), ipAddress);
 
         AddDomainEvent(new MessageEditedEvent(
             Id,
             ConversationId,
-            newContent));
+            SenderId,
+            oldContent,
+            newContent,
+            recipientIds ?? new List<Guid>()));
+    }
+
+    public void Delete(Guid deletedBy, string? ipAddress, ICollection<Guid>? recipientIds = null)
+    {
+        if (SenderId != deletedBy)
+            throw new InvalidOperationException("Only the sender can delete their message");
+
+        SetDeletionTracking(deletedBy.ToString(), ipAddress);
+
+        AddDomainEvent(new MessageDeletedEvent(
+            Id,
+            ConversationId,
+            SenderId,
+            deletedBy,
+            Content,
+            recipientIds ?? new List<Guid>()));
+    }
+
+    public void MarkAsDeliveredTo(Guid userId)
+    {
+        var status = _statuses.FirstOrDefault(s => s.UserId == userId);
+        if (status == null)
+        {
+            status = new MessageStatus(Id, userId);
+            _statuses.Add(status);
+        }
+
+        if (!status.IsDelivered)
+        {
+            status.MarkAsDelivered();
+            AddDomainEvent(new MessageDeliveredEvent(Id, ConversationId, SenderId, userId));
+        }
     }
 
     public void MarkAsReadBy(Guid userId)
     {
-        AddDomainEvent(new MessageReadEvent(
-            Id,
-            ConversationId,
-            userId));
+        var status = _statuses.FirstOrDefault(s => s.UserId == userId);
+        if (status == null)
+        {
+            status = new MessageStatus(Id, userId);
+            _statuses.Add(status);
+        }
+
+        if (!status.IsRead)
+        {
+            status.MarkAsRead();
+            AddDomainEvent(new MessageReadEvent(Id, ConversationId, SenderId, userId));
+        }
+    }
+
+    public bool IsDeliveredTo(Guid userId)
+    {
+        return _statuses.Any(s => s.UserId == userId && s.IsDelivered);
+    }
+
+    public bool IsReadBy(Guid userId)
+    {
+        return _statuses.Any(s => s.UserId == userId && s.IsRead);
+    }
+
+    public int GetDeliveredCount()
+    {
+        return _statuses.Count(s => s.IsDelivered);
+    }
+
+    public int GetReadCount()
+    {
+        return _statuses.Count(s => s.IsRead);
     }
 }
