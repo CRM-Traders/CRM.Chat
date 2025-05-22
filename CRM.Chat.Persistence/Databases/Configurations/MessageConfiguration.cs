@@ -1,4 +1,5 @@
-﻿using CRM.Chat.Domain.Entities.Messages;
+﻿using System.Text.Json;
+using CRM.Chat.Domain.Entities.Messages;
 using CRM.Chat.Persistence.Databases.Configurations.Base;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -33,12 +34,16 @@ public class MessageConfiguration : AuditableEntityTypeConfiguration<Message>
             .IsRequired()
             .HasConversion<int>();
 
-        // Configure AttachmentIds as JSON column
+        // Configure AttachmentIds as JSON column with proper value comparer
         builder.Property(m => m.AttachmentIds)
             .HasConversion(
-                v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions)null!),
-                v => System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(v, (System.Text.Json.JsonSerializerOptions)null!) ?? new List<Guid>())
-            .HasColumnType("jsonb");
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<Guid>>(v, (JsonSerializerOptions?)null) ?? new List<Guid>())
+            .HasColumnType("jsonb")
+            .Metadata.SetValueComparer(new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<Guid>>(
+                (c1, c2) => c1!.SequenceEqual(c2!),
+                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                c => c.ToList()));
 
         builder.HasIndex(m => new { m.ConversationId, m.SentAt });
         builder.HasIndex(m => m.SenderId);
