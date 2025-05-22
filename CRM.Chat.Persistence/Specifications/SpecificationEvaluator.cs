@@ -1,4 +1,4 @@
-﻿using CRM.Chat.Application.Common.Specifications;
+﻿using CRM.Chat.Application.Common.Abstractions.Specifications;
 using CRM.Chat.Domain.Common.Entities;
 using Microsoft.EntityFrameworkCore;
 

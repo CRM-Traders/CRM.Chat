@@ -1,5 +1,5 @@
 ﻿using CRM.Chat.Application.Common.Abstractions.Mediators;
-using CRM.Chat.Application.Common.Specifications;
+using CRM.Chat.Application.Common.Abstractions.Specifications;
 using CRM.Chat.Domain.Common.Entities;
 using CRM.Chat.Persistence.Databases;
 using CRM.Chat.Persistence.Specifications;

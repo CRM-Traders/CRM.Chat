@@ -1,6 +1,6 @@
 ﻿using System.Linq.Expressions;
 
-namespace CRM.Chat.Application.Common.Specifications;
+namespace CRM.Chat.Application.Common.Abstractions.Specifications;
 
 public interface ISpecification<T>
 {

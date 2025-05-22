@@ -3,11 +3,15 @@ using System.Security.Cryptography;
 using CRM.Chat.Application.Common.Abstractions.Users;
 using CRM.Chat.Application.Common.Publishers;
 using CRM.Chat.Application.Common.Services.Auth;
+using CRM.Chat.Application.Common.Services.FileStorage;
+using CRM.Chat.Application.Common.Services.Identity;
 using CRM.Chat.Application.Common.Services.Outbox;
 using CRM.Chat.Domain.Common.Events;
 using CRM.Chat.Infrastructure.Contexts;
 using CRM.Chat.Infrastructure.Publishers;
 using CRM.Chat.Infrastructure.Services.Auth;
+using CRM.Chat.Infrastructure.Services.FileStorageService;
+using CRM.Chat.Infrastructure.Services.IdentityService;
 using CRM.Chat.Infrastructure.Services.Outbox;
 using CRM.Chat.Infrastructure.Workers;
 using CRM.Identity.Domain.Common.Options.Auth;
@@ -91,6 +95,8 @@ public static class DependencyInjection
         services.AddScoped<IUserContext, UserContext>();
         services.AddScoped<IEventPublisher, EventPublisher>();
         services.AddScoped<IOutboxService, OutboxService>();
+        services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<IOutboxProcessor, OutboxProcessor>();
     }
 

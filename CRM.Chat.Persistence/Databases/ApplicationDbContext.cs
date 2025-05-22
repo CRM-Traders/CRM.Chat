@@ -1,7 +1,13 @@
 ﻿using System.Reflection;
 using CRM.Chat.Application.Common.Abstractions.Users;
 using CRM.Chat.Domain.Common.Entities;
+using CRM.Chat.Domain.Entities.ConversationMembers;
+using CRM.Chat.Domain.Entities.Conversations;
+using CRM.Chat.Domain.Entities.MessageAttachments;
+using CRM.Chat.Domain.Entities.Messages;
+using CRM.Chat.Domain.Entities.MessageStatuses;
 using CRM.Chat.Domain.Entities.OutboxMessages;
+using CRM.Chat.Domain.Entities.UserPresences;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
@@ -10,7 +16,12 @@ namespace CRM.Chat.Persistence.Databases;
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IUserContext userContext) : DbContext(options)
 {
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<ConversationMember> ConversationMembers => Set<ConversationMember>();
+    public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
+    public DbSet<MessageStatus> MessageStatuses => Set<MessageStatus>();
+    public DbSet<UserPresence> UserPresences => Set<UserPresence>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
